@@ -9,6 +9,8 @@ on your phone, on a console, on any PC, with no app running.
 
 Not affiliated with, or endorsed by, Moondrop. MIT licence.
 
+![The editor: a graph with five draggable bands and five band cards](docs/images/build-peq.png)
+
 ---
 
 ## Install
@@ -42,6 +44,20 @@ do not want to keep them.
 - **Presets** — a library with your own saved EQs and favourites.
 - **Safe by design** — the first time it connects, it saves your earphones'
   original EQ on your PC. "Restore original" puts it back at any time.
+
+**Quick Tune** — pick a sound, add tweaks in plain words, choose how strong:
+
+![Quick Tune: scenes, tweaks and a strength control, with what changed on the right](docs/images/quick-tune.png)
+
+**Presets** — your own EQs and the ready ones, with a badge on the one your
+earphones have:
+
+![The preset library, with a search box, groups and a preview](docs/images/presets.png)
+
+**Import and share** — paste a share code or an AutoEq file and see what the
+five bands will be, before anything changes:
+
+![The Import and share window, showing a pasted share code read back as five filters](docs/images/import-share.png)
 
 ## Good to know
 
