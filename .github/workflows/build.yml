@@ -47,4 +47,7 @@ jobs:
         run: |
           $zip = Get-ChildItem dist/CHU2Studio-*-win64.zip
           (Get-FileHash $zip.FullName -Algorithm SHA256).Hash.ToLower() | Out-File "$($zip.FullName).sha256" -Encoding ascii
+          # the release usually exists already (notes are written by hand); make one if not
+          gh release view $env:GITHUB_REF_NAME *> $null
+          if ($LASTEXITCODE -ne 0) { gh release create $env:GITHUB_REF_NAME --title "CHU 2 Studio $($env:GITHUB_REF_NAME -replace '^v')" --generate-notes }
           gh release upload $env:GITHUB_REF_NAME $zip.FullName "$($zip.FullName).sha256" --clobber
