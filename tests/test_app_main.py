@@ -151,6 +151,22 @@ def test_the_smoke_test_waits_for_a_cold_webview2():
     assert build_exe.SMOKE_TIMEOUT > app_main.SMOKE_PAGE_TIMEOUT_S
 
 
+@pytest.mark.skipif(os.name != "nt", reason="Zone.Identifier is a Windows NTFS thing")
+def test_files_from_a_downloaded_zip_are_unblocked(tmp_path):
+    """Windows marks everything unzipped from a download; .NET then refuses the app's own DLL."""
+    app = tmp_path / "CHU2Studio"
+    (app / "_internal").mkdir(parents=True)
+    dll = app / "_internal" / "Python.Runtime.dll"
+    dll.write_bytes(b"not really a dll")
+    with open(str(dll) + ":Zone.Identifier", "w", encoding="utf-8") as handle:
+        handle.write("[ZoneTransfer]\nZoneId=3\n")
+    assert app_main.unblock_own_files(str(app)) == 1
+    with pytest.raises(OSError):
+        open(str(dll) + ":Zone.Identifier", encoding="utf-8").close()
+    assert dll.read_bytes() == b"not really a dll"  # the file itself is untouched
+    assert app_main.unblock_own_files(str(app)) == 0  # nothing left to clear
+
+
 def test_the_exe_is_built_with_the_app_icon():
     build_exe = _load("build_exe", os.path.join(ROOT, "packaging", "build_exe.py"))
     assert os.path.isfile(build_exe.ICON), "packaging/icon.ico is missing (python packaging/make_icon.py)"

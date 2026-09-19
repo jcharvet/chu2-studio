@@ -159,6 +159,24 @@ def _setup_logging(debug: bool, folder: str) -> None:
         logging.basicConfig(level=level)
 
 
+def unblock_own_files(folder: str) -> int:
+    """Clear Windows' "this came from the internet" mark from the app's own files.
+
+    Everything unzipped from a downloaded file carries it, and .NET then refuses
+    to load ``Python.Runtime.dll``, so the window never opens. Returns how many
+    marks were cleared; missing ones and read-only folders are ignored.
+    """
+    cleared = 0
+    for root, _dirs, names in os.walk(folder):
+        for name in names:
+            try:
+                os.remove(os.path.join(root, name) + ":Zone.Identifier")
+            except OSError:
+                continue
+            cleared += 1
+    return cleared
+
+
 def _wait_for_page(window: Any, timeout: float = 30.0) -> bool:
     deadline = time.monotonic() + timeout
     while time.monotonic() < deadline:
@@ -175,6 +193,10 @@ def main(argv: Optional[Sequence[str]] = None) -> int:
     args = parse_args(argv)
     store = Store(tempfile.mkdtemp(prefix="chu2-smoke-")) if args.smoke_test else None
     _setup_logging(args.debug, store.root if store else default_root())
+    if getattr(sys, "frozen", False) and os.name == "nt":
+        cleared = unblock_own_files(os.path.dirname(sys.executable))
+        if cleared:
+            logger.info("cleared the internet mark from %d app files", cleared)
     import webview  # here, so tests and the CLI never need pywebview
 
     windows: List[Any] = []

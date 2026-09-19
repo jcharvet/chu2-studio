@@ -19,7 +19,7 @@ Not affiliated with, or endorsed by, Moondrop. MIT licence.
 
 ## Install
 
-1. Download `CHU2Studio-0.1.0-win64.zip` from the
+1. Download `CHU2Studio-0.1.1-win64.zip` from the
    [latest release](../../releases/latest).
 2. Unzip it anywhere, for example `Documents\CHU2Studio`.
 3. Run `CHU2Studio.exe`.
