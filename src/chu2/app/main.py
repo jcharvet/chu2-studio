@@ -37,6 +37,9 @@ UI_DIR = os.path.join(os.path.dirname(os.path.abspath(__file__)), "ui")
 UI_INDEX = os.path.join(UI_DIR, "index.html")
 #: the window's colour before the page paints, per theme (tokens.css --bg)
 THEME_BACKGROUND = dict(zip(THEMES, ("#0A0B0F", "#11111B", "#0E1210", "#DCE0E8", "#EDEAE4")))
+#: How long ``--smoke-test`` waits for the page: a cold WebView2 on a build
+#: machine took more than 30 s (GitHub Actions, 2026-09-19).
+SMOKE_PAGE_TIMEOUT_S = 120.0
 _OPEN, _SAVE = 10, 30  # webview.FileDialog.OPEN / SAVE (no pywebview import needed here)
 
 logger = logging.getLogger(__name__)
@@ -191,7 +194,7 @@ def main(argv: Optional[Sequence[str]] = None) -> int:
         pump.start()
         service.start()
         if args.smoke_test:
-            page["ready"] = _wait_for_page(window)
+            page["ready"] = _wait_for_page(window, SMOKE_PAGE_TIMEOUT_S)
             window.destroy()
 
     try:

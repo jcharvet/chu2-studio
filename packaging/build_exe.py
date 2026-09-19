@@ -19,6 +19,7 @@ import os
 import shutil
 import subprocess
 import sys
+import tempfile
 
 ROOT = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 sys.path.insert(0, os.path.join(ROOT, "src"))
@@ -30,7 +31,7 @@ WORK = os.path.join(ROOT, "build", "pyinstaller")
 APP_DIR = os.path.join(DIST, NAME)
 EXE = os.path.join(APP_DIR, NAME + ".exe")
 UI = os.path.join(ROOT, "src", "chu2", "app", "ui")
-SMOKE_TIMEOUT = 120  # seconds; the first WebView2 start can be slow
+SMOKE_TIMEOUT = 180  # seconds; must stay above main.SMOKE_PAGE_TIMEOUT_S
 
 
 def build() -> None:
@@ -48,6 +49,19 @@ def build() -> None:
     ])
 
 
+def smoke_log() -> str:
+    """The log of the last ``--smoke-test`` run: a build machine deletes its
+    temp folder, so a failure has to carry the log with it."""
+    folders = glob.glob(os.path.join(tempfile.gettempdir(), "chu2-smoke-*"))
+    for folder in sorted(folders, key=os.path.getmtime, reverse=True):
+        try:
+            with open(os.path.join(folder, "chu2-studio.log"), encoding="utf-8") as handle:
+                return handle.read()[-4000:]
+        except OSError:
+            continue
+    return "(no log found)"
+
+
 def check() -> None:
     if not glob.glob(os.path.join(APP_DIR, "_internal", "hid*.pyd")):
         sys.exit("hidapi (hid.pyd) is missing from the build: the app couldn't find a real CHU 2")
@@ -56,10 +70,9 @@ def check() -> None:
     try:
         result = subprocess.run([EXE, "--smoke-test"], timeout=SMOKE_TIMEOUT)
     except subprocess.TimeoutExpired:
-        sys.exit(f"{NAME}.exe --smoke-test did not finish in {SMOKE_TIMEOUT} s")
+        sys.exit(f"{NAME}.exe --smoke-test did not finish in {SMOKE_TIMEOUT} s\n{smoke_log()}")
     if result.returncode != 0:
-        sys.exit(f"{NAME}.exe --smoke-test failed (exit {result.returncode}); "
-                 "see chu2-studio.log in the chu2-smoke-* folder under %TEMP%")
+        sys.exit(f"{NAME}.exe --smoke-test failed (exit {result.returncode})\n{smoke_log()}")
     print(f"smoke test passed: {EXE}")
 
 

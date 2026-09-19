@@ -3,6 +3,7 @@
     python -m pytest -q tests/test_app_main.py
 """
 
+import importlib.util
 import json
 import os
 import threading
@@ -12,6 +13,16 @@ import pytest
 
 from chu2.app import main as app_main
 from chu2.store import THEMES, Store
+
+ROOT = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
+
+
+def _load(name, path):
+    """A module that is not in the package (packaging/build_exe.py)."""
+    spec = importlib.util.spec_from_file_location(name, path)
+    module = importlib.util.module_from_spec(spec)
+    spec.loader.exec_module(module)
+    return module
 
 
 def _wait(predicate, timeout=2.0):
@@ -130,4 +141,24 @@ def test_dialog_numbers_match_pywebview():
 def test_smoke_test_flag_and_theme_colours():
     assert app_main.parse_args(["--smoke-test"]).smoke_test
     assert set(app_main.THEME_BACKGROUND) == set(THEMES)
+
+
+def test_the_smoke_test_waits_for_a_cold_webview2():
+    """A GitHub runner needed more than 30 s to show the page the first time."""
+    build_exe = _load("build_exe", os.path.join(ROOT, "packaging", "build_exe.py"))
+    assert app_main.SMOKE_PAGE_TIMEOUT_S >= 90
+    # the build script must wait longer than the app, or its message blames the wrong thing
+    assert build_exe.SMOKE_TIMEOUT > app_main.SMOKE_PAGE_TIMEOUT_S
+
+
+def test_a_failed_build_shows_the_last_smoke_log(tmp_path, monkeypatch):
+    """A build machine throws its temp folder away, so the message must carry the log."""
+    build_exe = _load("build_exe", os.path.join(ROOT, "packaging", "build_exe.py"))
+    monkeypatch.setattr(build_exe.tempfile, "gettempdir", lambda: str(tmp_path))
+    for name, text, when in (("chu2-smoke-old", "an older run", 1_000), ("chu2-smoke-new", "page never ready", 2_000)):
+        folder = tmp_path / name
+        folder.mkdir()
+        (folder / "chu2-studio.log").write_text(text, encoding="utf-8")
+        os.utime(folder, (when, when))
+    assert "page never ready" in build_exe.smoke_log()
 
