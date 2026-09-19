@@ -32,21 +32,28 @@ APP_DIR = os.path.join(DIST, NAME)
 EXE = os.path.join(APP_DIR, NAME + ".exe")
 UI = os.path.join(ROOT, "src", "chu2", "app", "ui")
 SMOKE_TIMEOUT = 180  # seconds; must stay above main.SMOKE_PAGE_TIMEOUT_S
+ICON = os.path.join(os.path.dirname(os.path.abspath(__file__)), "icon.ico")
 
 
-def build() -> None:
-    import PyInstaller.__main__
-
-    PyInstaller.__main__.run([
+def command() -> list:
+    """The PyInstaller options for the app."""
+    return [
         os.path.join(ROOT, "packaging", "launcher.py"),
         "--name", NAME, "--onedir", "--windowed", "--noconfirm", "--clean",
         "--distpath", DIST, "--workpath", WORK, "--specpath", WORK,
         "--paths", os.path.join(ROOT, "src"),
         "--add-data", f"{UI}{os.pathsep}chu2/app/ui",
+        "--icon", ICON,  # packaging/make_icon.py draws it
         "--recursive-copy-metadata", "chu2-dsp",  # the dependencies' licence files
         "--exclude-module", "tkinter",
         "--exclude-module", "usb",  # research tools only (chu2.research)
-    ])
+    ]
+
+
+def build() -> None:
+    import PyInstaller.__main__
+
+    PyInstaller.__main__.run(command())
 
 
 def smoke_log() -> str:

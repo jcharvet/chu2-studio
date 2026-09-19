@@ -1,3 +1,7 @@
+<p align="center">
+  <img src="docs/images/banner.png" alt="CHU 2 Studio" width="360">
+</p>
+
 # CHU 2 Studio
 
 Tune the EQ **inside** your Moondrop CHU 2 DSP earphones, from Windows, for free.

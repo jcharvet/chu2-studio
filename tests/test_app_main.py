@@ -151,6 +151,12 @@ def test_the_smoke_test_waits_for_a_cold_webview2():
     assert build_exe.SMOKE_TIMEOUT > app_main.SMOKE_PAGE_TIMEOUT_S
 
 
+def test_the_exe_is_built_with_the_app_icon():
+    build_exe = _load("build_exe", os.path.join(ROOT, "packaging", "build_exe.py"))
+    assert os.path.isfile(build_exe.ICON), "packaging/icon.ico is missing (python packaging/make_icon.py)"
+    assert ["--icon", build_exe.ICON] == [a for a in build_exe.command() if a in ("--icon", build_exe.ICON)]
+
+
 def test_a_failed_build_shows_the_last_smoke_log(tmp_path, monkeypatch):
     """A build machine throws its temp folder away, so the message must carry the log."""
     build_exe = _load("build_exe", os.path.join(ROOT, "packaging", "build_exe.py"))
