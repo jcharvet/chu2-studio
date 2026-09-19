@@ -1,5 +1,5 @@
 <p align="center">
-  <img src="docs/images/banner.png" alt="CHU 2 Studio" width="360">
+  <img src="docs/images/icon.png" alt="CHU 2 Studio" width="120">
 </p>
 
 # CHU 2 Studio
