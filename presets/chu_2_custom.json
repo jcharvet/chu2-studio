@@ -1,0 +1,33 @@
+{
+  "version": 1,
+  "name": "CHU 2 Custom",
+  "description": "",
+  "sample_rate": 48000,
+  "preamp": -4.0,
+  "bands": [
+    {
+      "type": "low_shelf",
+      "frequency": 90.0,
+      "gain": 2.0,
+      "q": 0.7
+    },
+    {
+      "type": "peaking",
+      "frequency": 2800.0,
+      "gain": -1.5,
+      "q": 1.2
+    },
+    {
+      "type": "peaking",
+      "frequency": 7500.0,
+      "gain": -2.0,
+      "q": 2.0
+    },
+    {
+      "type": "high_shelf",
+      "frequency": 12000.0,
+      "gain": 1.0,
+      "q": 0.7
+    }
+  ]
+}

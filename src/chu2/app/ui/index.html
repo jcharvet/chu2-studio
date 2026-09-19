@@ -1,0 +1,18 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>CHU 2 Studio</title>
+<link rel="stylesheet" href="tokens.css">
+<link rel="stylesheet" href="app.css">
+</head>
+<body>
+<div id="app"></div>
+<!-- If a module can't be loaded (a refused connection while the PC is busy, for example
+     antivirus scanning a fresh unzip), the window would stay blank: reload, at most 3 times. -->
+<script type="module" src="app.js"
+        onerror="var n = Number(sessionStorage.getItem('chu2-reloads')) || 0;
+                 if (n < 3) { sessionStorage.setItem('chu2-reloads', n + 1); location.reload(); }"></script>
+</body>
+</html>

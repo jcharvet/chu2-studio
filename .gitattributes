@@ -1,0 +1,4 @@
+# Vendored UI assets stay byte-exact (their SHA-256 is checked when downloaded).
+src/chu2/app/ui/vendor/** -text
+src/chu2/app/ui/fonts/** -text
+src/chu2/app/ui/icons/** -text

@@ -1,0 +1,47 @@
+# Byte-compiled / optimized / DLL files
+__pycache__/
+*.py[cod]
+*$py.class
+
+# Distribution / packaging
+build/
+dist/
+*.egg-info/
+.eggs/
+
+# Virtual environments
+.venv/
+venv/
+env/
+
+# Test / coverage
+.pytest_cache/
+.coverage
+htmlcov/
+
+# Editor / OS
+.idea/
+.vscode/
+.DS_Store
+Thumbs.db
+
+# Local presets (users may keep private EQ profiles here)
+presets/user_presets/*.json
+!presets/user_presets/.gitkeep
+
+# Captures
+*.pcap
+*.pcapng
+captures/
+
+# Reverse-engineering artifacts
+*.apk
+/ag/
+.vendor/
+
+# Research tooling (APK analysis), not part of the app
+/vendor/
+.pip-tmp/
+
+# Written by `chu2 dsp write` on first use; personal to each PC
+presets/chu2_hardware_backup.json

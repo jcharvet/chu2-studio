@@ -1,0 +1,13 @@
+{
+  "version": 1,
+  "name": "Default (Flat)",
+  "description": "Neutral template. Adjust and re-save as your own preset.",
+  "sample_rate": 48000,
+  "bands": [
+    {"type": "peaking", "frequency": 100.0, "gain": 0.0, "q": 1.0},
+    {"type": "peaking", "frequency": 300.0, "gain": 0.0, "q": 1.0},
+    {"type": "peaking", "frequency": 1000.0, "gain": 0.0, "q": 1.0},
+    {"type": "peaking", "frequency": 3000.0, "gain": 0.0, "q": 1.0},
+    {"type": "peaking", "frequency": 8000.0, "gain": 0.0, "q": 1.0}
+  ]
+}

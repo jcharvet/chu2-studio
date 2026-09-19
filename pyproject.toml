@@ -1,0 +1,52 @@
+[build-system]
+requires = ["setuptools>=64"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "chu2-dsp"
+version = "0.1.0"
+description = "Open-source DSP control tool for the Moondrop CHU 2 (KTMicro DSP)"
+readme = "README.md"
+requires-python = ">=3.9"
+license = { text = "MIT" }
+authors = [{ name = "Moondrop CHU 2 DSP Open-Source Tool contributors" }]
+keywords = ["audio", "dsp", "eq", "iem", "moondrop", "usb"]
+classifiers = [
+    "Development Status :: 3 - Alpha",
+    "Environment :: Console",
+    "Intended Audience :: End Users/Desktop",
+    "License :: OSI Approved :: MIT License",
+    "Operating System :: OS Independent",
+    "Programming Language :: Python :: 3",
+    "Topic :: Multimedia :: Sound/Audio",
+]
+dependencies = [
+    "hidapi>=0.14.0",
+    "pywebview>=6.2",
+]
+
+[project.urls]
+Homepage = "https://github.com/jcharvet/chu2-studio"
+Issues = "https://github.com/jcharvet/chu2-studio/issues"
+
+[project.optional-dependencies]
+research = ["pyusb>=1.2.1"]  # old probe scripts; needs a Zadig driver
+gui = ["matplotlib>=3.7.0"]
+audio = ["sounddevice>=0.4.6"]
+dev = ["pytest>=7.0", "playwright>=1.49"]
+build = ["pyinstaller>=6.22"]  # packaging/build_exe.py
+
+[project.scripts]
+chu2 = "chu2.cli:main"
+chu2-gui = "chu2.gui:main"
+chu2-studio = "chu2.app.main:main"
+
+[tool.setuptools]
+package-dir = { "" = "src" }
+
+[tool.setuptools.packages.find]
+where = ["src"]
+
+[tool.setuptools.package-data]
+chu2 = ["py.typed"]
+"chu2.app" = ["ui/*", "ui/**/*"]

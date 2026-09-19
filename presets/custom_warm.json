@@ -1,0 +1,13 @@
+{
+  "version": 1,
+  "name": "Custom Warm",
+  "description": "My custom warm tuning.",
+  "sample_rate": 48000,
+  "preamp": -2.5,
+  "bands": [
+    {"type": "low_shelf",  "frequency": 100.0, "gain": 2.5,  "q": 0.71},
+    {"type": "peaking",    "frequency": 200.0, "gain": 1.0,  "q": 1.0},
+    {"type": "peaking",    "frequency": 3500.0, "gain": -1.5, "q": 1.4},
+    {"type": "high_shelf", "frequency": 8000.0, "gain": -2.0, "q": 0.71}
+  ]
+}
