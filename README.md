@@ -2,6 +2,15 @@
   <img src="docs/images/icon.png" alt="CHU 2 Studio" width="120">
 </p>
 
+<p align="center">
+  <a href="https://github.com/jcharvet/chu2-studio/actions/workflows/build.yml"><img
+    src="https://github.com/jcharvet/chu2-studio/actions/workflows/build.yml/badge.svg"
+    alt="Build and tests"></a>
+  <a href="https://github.com/jcharvet/chu2-studio/releases/latest"><img
+    src="https://img.shields.io/github/v/release/jcharvet/chu2-studio?label=download&color=1f883d"
+    alt="Latest release"></a>
+</p>
+
 # CHU 2 Studio
 
 Tune the EQ **inside** your Moondrop CHU 2 DSP earphones, from Windows, for free.
