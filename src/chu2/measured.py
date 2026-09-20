@@ -14,7 +14,8 @@ belong to the person named in it; AutoEq states no separate terms for them.
 
 from __future__ import annotations
 
-from typing import Any, Dict, List
+import functools
+from typing import Any, Dict, List, Tuple
 
 from . import transfer
 
@@ -130,12 +131,14 @@ Filter 10: ON PK Fc 26 Hz Gain -0.4 dB Q 2.54
 )
 
 
-def catalog() -> List[Dict[str, Any]]:
-    """One preset item per tuning, in the shape :mod:`chu2.library` lists."""
-    items = []
+@functools.lru_cache(maxsize=1)
+def _computed() -> Tuple[Dict[str, Any], ...]:
+    """Read every tuning once. Reducing ten filters to five costs about 90 ms in
+    total, and :meth:`chu2.library.Library.presets` is called often."""
+    out = []
     for tuning in TUNINGS:
         preview = transfer.read_text(tuning["text"])
-        items.append({
+        out.append({
             "id": "measured:" + tuning["id"],
             "name": tuning["name"],
             "group": "measured",
@@ -145,4 +148,14 @@ def catalog() -> List[Dict[str, Any]]:
                       f"{tuning['rig']}. Its {preview['total']} filters are reduced to the "
                       f"CHU 2's 5, within {preview['gap_db']:.1f} dB of the original."),
         })
-    return items
+    return tuple(out)
+
+
+def catalog() -> List[Dict[str, Any]]:
+    """One preset item per tuning, in the shape :mod:`chu2.library` lists.
+
+    Fresh dicts every call: the library writes ``favourite`` into each item, which
+    must never reach the cache.
+    """
+    return [dict(item, tags=list(item["tags"]), bands=[dict(b) for b in item["bands"]])
+            for item in _computed()]

@@ -1,5 +1,8 @@
 """Build the Windows app: ``dist/CHU2Studio/CHU2Studio.exe`` and a zip to share.
 
+The zip holds the app's files at its root, so extracting it gives one folder
+named after the zip, with ``CHU2Studio.exe`` directly inside.
+
     pip install -e ".[build]"
     python packaging/build_exe.py
 
@@ -87,7 +90,10 @@ def package() -> str:
     shutil.copy(os.path.join(ROOT, "LICENSE"), os.path.join(APP_DIR, "LICENSE.txt"))
     shutil.copy(os.path.join(sys.base_prefix, "LICENSE.txt"), os.path.join(APP_DIR, "LICENSE-Python.txt"))
     base = os.path.join(DIST, f"{NAME}-{__version__}-win64")
-    return shutil.make_archive(base, "zip", DIST, NAME)
+    # The app's files sit at the root of the zip, not inside another CHU2Studio folder:
+    # Windows already makes a folder named after the zip when you extract it, so wrapping
+    # them gave everyone ...\CHU2Studio-0.1.1-win64\CHU2Studio\CHU2Studio.exe.
+    return shutil.make_archive(base, "zip", APP_DIR)
 
 
 if __name__ == "__main__":

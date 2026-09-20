@@ -52,3 +52,20 @@ def test_the_six_tunings_differ_from_each_other():
     shapes = {tuple((b["type"], b["frequency"], b["gain"], b["q"]) for b in item["bands"])
               for item in measured.catalog()}
     assert len(shapes) == 6
+
+
+def test_reading_the_tunings_happens_once_and_is_never_shared():
+    """Reducing ten filters to five costs ~90 ms, and the library asks often."""
+    measured.catalog()
+    before = measured._computed.cache_info()
+    measured.catalog()
+    after = measured._computed.cache_info()
+    assert after.misses == before.misses, "the tunings were read again"
+
+    first, second = measured.catalog(), measured.catalog()
+    first[0]["favourite"] = True
+    first[0]["bands"][0]["gain"] = 99.0
+    first[0]["tags"].append("scribbled on")
+    assert "favourite" not in second[0]
+    assert second[0]["bands"][0]["gain"] != 99.0
+    assert "scribbled on" not in second[0]["tags"]
