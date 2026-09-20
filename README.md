@@ -114,9 +114,6 @@ chu2 dsp write my.json # write it, check it, save it
 chu2 dsp restore       # back to the EQ found before the first write
 ```
 
-Issues and pull requests are welcome. Tests come first: every change here ships
-with one.
-
 ## Thanks
 
 - [devicePEQ](https://github.com/jeromeof/devicePEQ) — the KTMicro command
