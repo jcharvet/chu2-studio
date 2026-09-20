@@ -49,7 +49,9 @@ do not want to keep them.
   Calls), each with a strength control and plain-language tweaks such as
   "Cleaner bass" or "Less sharp cymbals".
 - **Build PEQ** — the five bands the chip has, on a graph you can drag, with
-  numbers you can type. Undo and redo included.
+  numbers you can type. Undo and redo included. The chip gives you the full
+  range: 20 Hz to 20 kHz in 1 Hz steps, ±12 dB in 0.1 dB steps, Q from 0.1 to 10
+  — finer control than Moondrop's own FreeDSP cable offers.
 - **Hear before you save** — every change plays at once. Nothing is written to
   the earphones until you press Save.
 - **Import and share** — read AutoEq, Equalizer APO and Peace files (it keeps
