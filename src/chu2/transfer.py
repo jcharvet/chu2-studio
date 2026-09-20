@@ -12,17 +12,19 @@ shows before anything changes:
 
 The CHU 2 has five bands of peak / low shelf / high shelf: other filter types
 are listed but not used, values are clamped to the CHU 2's limits, and when a
-file has more than five filters the five with the largest gain are kept (in
-file order). The file's preamp is shown, not copied: the app builds its own
+file has more than five filters the five whose combined curve comes closest to
+the whole file are kept (in file order), with the shortfall reported in dB. The file's preamp is shown, not copied: the app builds its own
 preamp from the bands (spec §4.4).
 """
 
 from __future__ import annotations
 
+import itertools
 import json
+import math
 import os
 import re
-from typing import Any, Dict, List, Optional, Sequence
+from typing import Any, Dict, List, Optional, Sequence, Tuple
 
 from . import dsp, eq, preamp, quicktune, sharecode
 
@@ -69,13 +71,51 @@ def _row(n: int, kind: Optional[str], code: str, frequency: float, gain: float,
             "status": status}
 
 
+# Picking 5 of 10 filters costs about 2 dB at its worst point whatever you keep: the
+# CHU 2 has five bands and AutoEq writes ten. Choosing by largest gain landed within
+# 0.03 dB (rms) of the best possible choice on a typical file but up to 1.6 dB out on a
+# few, so the choice is made exactly instead, against the curve the whole file draws.
+_SELECT_GRID = eq.log_frequency_axis(20.0, 20_000.0, 121)
+_SELECT_MAX_TRIES = 3000  # ponytail: exact up to 14 filters, largest-gain above that
+
+
+def _heard(row: Dict[str, Any]) -> eq.FilterBand:
+    return eq.FilterBand(row["type"], row["frequency"],
+                         0.0 if row.get("bypass") else row["gain"], row["q"])
+
+
+def _closest(rows: List[Dict[str, Any]]) -> Tuple[List[Dict[str, Any]], float]:
+    """The five filters whose combined curve is closest to all of them together.
+
+    A flat level difference is ignored, because the app works out its own preamp:
+    only the shape counts. Returns the kept rows in file order, and how far the
+    result sits from the whole file in dB at its worst point.
+    """
+    if len(rows) <= dsp.KT_BANDS:
+        return rows, 0.0
+    curves = [eq.Equalizer([_heard(r)]).magnitude_response_db(_SELECT_GRID) for r in rows]
+    whole = [sum(col) for col in zip(*curves)]
+
+    def gap(picked: Sequence[int]) -> List[float]:
+        total = [sum(curves[i][n] for i in picked) for n in range(len(_SELECT_GRID))]
+        offset = sum(w - t for w, t in zip(whole, total)) / len(whole)
+        return [abs(w - t - offset) for w, t in zip(whole, total)]
+
+    if math.comb(len(rows), dsp.KT_BANDS) <= _SELECT_MAX_TRIES:
+        picked = min(itertools.combinations(range(len(rows)), dsp.KT_BANDS),
+                     key=lambda c: sum(d * d for d in gap(c)))
+    else:
+        picked = sorted(range(len(rows)),
+                        key=lambda i: (-abs(rows[i]["gain"]), rows[i]["n"]))[:dsp.KT_BANDS]
+    return [rows[i] for i in sorted(picked)], max(gap(picked))
+
+
 def _preview(name: str, fmt: str, rows: List[Dict[str, Any]],
              file_preamp: Optional[float]) -> Dict[str, Any]:
     usable = [r for r in rows if r["type"] is not None]
     if not usable:
         raise TransferError("No EQ filters the CHU 2 can play were found in this text.")
-    largest = sorted(usable, key=lambda r: (-abs(r["gain"]), r["n"]))[:dsp.KT_BANDS]
-    kept = sorted(largest, key=lambda r: r["n"])
+    kept, gap_db = _closest(usable)
     kept_n = {r["n"] for r in kept}
     for row in usable:
         if row["n"] not in kept_n:
@@ -85,14 +125,16 @@ def _preview(name: str, fmt: str, rows: List[Dict[str, Any]],
     bands += [dict(b) for b in quicktune.IDLE_DESIGN[len(bands):]]
     notes = []
     if len(usable) > dsp.KT_BANDS:
-        notes.append(f"CHU 2 has 5 bands. This file has {len(rows)}: keeping the 5 largest.")
+        notes.append(f"CHU 2 has 5 bands. This file has {len(rows)}: keeping the 5 that come "
+                     f"closest, within {gap_db:.1f} dB of the file.")
     if file_preamp:
         notes.append(f"The file's preamp ({_minus(file_preamp)} dB) isn't copied: CHU 2 Studio works out "
                      "its own preamp from the bands.")
     heard = [eq.FilterBand(b["type"], b["frequency"], 0.0 if b["bypass"] else b["gain"], b["q"])
              for b in bands]
     return {"name": name, "format": fmt, "filters": rows, "total": len(rows), "bands": bands,
-            "preamp": file_preamp, "peak_db": round(preamp.peak(heard)[0], 1) + 0.0, "notes": notes}
+            "preamp": file_preamp, "peak_db": round(preamp.peak(heard)[0], 1) + 0.0,
+            "gap_db": round(gap_db, 1), "notes": notes}
 
 
 def read_text(text: str, source_name: str = "") -> Dict[str, Any]:

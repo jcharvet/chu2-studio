@@ -21,20 +21,39 @@ Filter 10: OFF PK Fc 500 Hz Gain 9.0 dB Q 1.00
 """
 
 
-def test_an_autoeq_file_keeps_the_five_largest_filters():
+def test_an_autoeq_file_keeps_the_five_closest_filters():
     got = transfer.read_text(AUTOEQ, "ParametricEQ.txt")
     assert got["name"] == "ParametricEQ" and got["format"] == "Equalizer APO / AutoEq text"
     assert got["total"] == 9 and got["preamp"] == -6.2  # the OFF filter is not heard, so not counted
     kept = [(b["type"], b["frequency"], b["gain"]) for b in got["bands"]]
     assert kept == [("low_shelf", 105.0, 6.5), ("peaking", 180.0, -3.1), ("peaking", 3500.0, -2.2),
-                    ("peaking", 6416.0, 5.7), ("peaking", 8120.0, 12.0)]  # 5 largest, file order
+                    ("peaking", 6416.0, 5.7), ("peaking", 8120.0, 12.0)]  # file order
     status = {row["n"]: row["status"] for row in got["filters"]}
     assert status[7] == "gain limited to +12.0" and status[9] == "high-pass isn't available on CHU 2"
     assert status[3] == "not kept (5 bands)" and status[1] == "fits"
     assert got["notes"] == [
-        "CHU 2 has 5 bands. This file has 9: keeping the 5 largest.",
+        "CHU 2 has 5 bands. This file has 9: keeping the 5 that come closest, "
+        "within 1.7 dB of the file.",
         "The file's preamp (−6.2 dB) isn't copied: CHU 2 Studio works out its own preamp "
         "from the bands."]
+
+
+def test_a_wide_quiet_filter_beats_a_narrow_loud_one():
+    """Largest gain is the wrong rule: a broad 1 dB shapes the curve more than a spike."""
+    wide = """
+Filter 1: ON PK Fc 60 Hz Gain -4.0 dB Q 0.80
+Filter 2: ON PK Fc 300 Hz Gain 2.5 dB Q 1.00
+Filter 3: ON PK Fc 2500 Hz Gain -3.5 dB Q 1.20
+Filter 4: ON PK Fc 8000 Hz Gain 2.0 dB Q 1.50
+Filter 5: ON PK Fc 1000 Hz Gain 3.0 dB Q 10.0
+Filter 6: ON PK Fc 1000 Hz Gain 1.0 dB Q 0.30
+"""
+    got = transfer.read_text(wide, "wide.txt")
+    status = {row["n"]: row["status"] for row in got["filters"]}
+    assert status[5] == "not kept (5 bands)"   # +3.0 dB, but Q 10 is a needle
+    assert status[6] == "fits"                 # +1.0 dB, but Q 0.3 is wide
+    assert got["bands"][4] == {"type": "peaking", "frequency": 1000.0, "gain": 1.0,
+                               "q": 0.3, "bypass": False}
 
 
 def test_a_short_file_is_padded_with_idle_bands():

@@ -176,14 +176,18 @@ def kt_command(transport: Any, payload: bytes) -> bytes:
     ``read(length, timeout_ms) -> bytes``, returning ``b""`` on timeout
     (:class:`HidTransport` and ``chu2.fake_device.FakeChu2``).
     """
-    transport.write(bytes([KT_REPORT_ID]) + payload)
-    for _ in range(5):  # skip unrelated input reports
-        reply = transport.read(64, 500)
-        if not reply:
-            break
-        if (len(reply) >= 11 and reply[0] == KT_REPORT_ID
-                and reply[1] == payload[0] and reply[5] == payload[4]):
-            return bytes(reply[7:11])
+    # ponytail: one retry, for the report that is lost rather than late. A reply
+    # echoes the register and the command byte, so a late one cannot be mistaken
+    # for the answer to a different question.
+    for _ in range(2):
+        transport.write(bytes([KT_REPORT_ID]) + payload)
+        for _ in range(5):  # skip unrelated input reports
+            reply = transport.read(64, 500)
+            if not reply:
+                break
+            if (len(reply) >= 11 and reply[0] == KT_REPORT_ID
+                    and reply[1] == payload[0] and reply[5] == payload[4]):
+                return bytes(reply[7:11])
     raise device_mod.UsbError(f"no reply from the DSP to {payload.hex(' ')}")
 
 

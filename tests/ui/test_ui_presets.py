@@ -25,8 +25,9 @@ def _called(page, method, count=1):
 def test_groups_counts_and_the_on_chu2_badge(open_app):
     page = open_app()
     _open(page)
-    assert [_count(page, c) for c in ("all", "official", "gaming", "music", "movies", "calls", "mine",
-                                      "favourites")] == ["7", "1", "2", "2", "1", "1", "1", "0"]
+    assert [_count(page, c) for c in ("all", "official", "gaming", "music", "movies", "calls",
+                                      "measured", "mine", "favourites")] == [
+        "13", "1", "2", "2", "1", "1", "6", "1", "0"]  # 6 measured: the AutoEq Chu 2 tunings
     page.click("[data-test=cat-gaming]")
     assert _shown(page) == ["scene:gaming", "scene:fps"]
     page.click("[data-test=cat-mine]")

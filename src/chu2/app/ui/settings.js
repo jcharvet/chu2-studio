@@ -14,6 +14,7 @@ const THEMES = [
 ];
 const CREDITS = [
   ["Vue", "MIT", "vendor/LICENSE-vue.txt"],
+  ["AutoEq measured tunings — Jaakko Pasanen", "MIT", "LICENSE-autoeq.txt"],
   ["Phosphor Icons", "MIT", "icons/LICENSE-phosphor.txt"],
   ["Catppuccin colours (Mocha, Latte)", "MIT", "LICENSE-catppuccin.txt"],
   ["Inter", "SIL Open Font License 1.1", "fonts/OFL-Inter.txt"],
@@ -79,6 +80,25 @@ export const SettingsDialog = {
                    @change="setSetting('confirm_save', $event.target.checked)">
             Ask before saving to CHU 2 (it restarts, so audio drops for about a second)
           </label>
+          <h3 class="eyebrow">Clicking</h3>
+          <label class="toggle">
+            <input type="checkbox" data-test="keep-awake" :disabled="!state.settings.keep_awake_ok"
+                   :checked="state.settings.keep_awake"
+                   @change="setSetting('keep_awake', $event.target.checked)">
+            Stop the click before every sound
+          </label>
+          <label class="toggle">
+            <input type="checkbox" data-test="start-with-windows"
+                   :disabled="!state.settings.keep_awake_ok"
+                   :checked="state.settings.start_with_windows"
+                   @change="setSetting('start_with_windows', $event.target.checked)">
+            Keep doing it when the app is closed (starts with Windows)
+          </label>
+          <p class="meta">The CHU 2 switches its amplifier off when nothing is playing and clicks when it
+            comes back, so videos, tracks and notifications all start with a pop. This plays silence to
+            keep it awake. It follows whatever Windows uses as the default output, so turn it off and on
+            again if you swap headphones. The second switch puts a small file in your Startup folder so the
+            silence carries on when CHU 2 Studio is shut; unticking it deletes that file.</p>
           <h3 class="eyebrow">Your data</h3>
           <p class="meta">The backup of your CHU 2's original EQ, your presets, settings and the log stay on this PC.</p>
           <div class="actions actions-start">

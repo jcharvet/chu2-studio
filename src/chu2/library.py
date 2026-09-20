@@ -3,6 +3,7 @@
     official  "Flat (your CHU 2's own tuning)" and "Your CHU 2 when first seen"
               (the first-seen backup, chu2.store)
     builtin   the Quick Tune scenes (chu2.quicktune), at standard intensity
+    measured  the published AutoEq tunings for the Chu 2 (chu2.measured)
     mine      the user's presets: ``%APPDATA%\\CHU2Studio\\presets\\<name>.chu2.json``
 
 User files use the ``chu2.preset`` JSON format plus ``tags`` and a per-band
@@ -21,7 +22,7 @@ import re
 import threading
 from typing import Any, Dict, List, Sequence
 
-from . import dsp, eq, quicktune, transfer
+from . import dsp, eq, measured, quicktune, transfer
 from .store import Store, band_to_dict
 
 logger = logging.getLogger(__name__)
@@ -82,6 +83,7 @@ class Library:
             items.append({"id": f"scene:{scene['id']}", "name": scene["name"], "group": "builtin",
                           "tags": list(scene["tags"]), "bands": design, "about": scene["about"],
                           "gaming": scene["gaming"]})
+        items.extend(measured.catalog())
         items.extend(self._mine())
         favourites = set(self._store.load_favourites())
         for item in items:

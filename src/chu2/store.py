@@ -24,7 +24,8 @@ from . import eq
 
 APP_DIR_ENV = "CHU2STUDIO_HOME"
 THEMES = ("atelier", "mocha", "sage", "latte", "porcelain")
-DEFAULT_SETTINGS: Dict[str, Any] = {"auto_preamp": True, "theme": "atelier", "confirm_save": True}
+DEFAULT_SETTINGS: Dict[str, Any] = {"auto_preamp": True, "theme": "atelier",
+                                   "confirm_save": True, "keep_awake": False}
 
 logger = logging.getLogger(__name__)
 

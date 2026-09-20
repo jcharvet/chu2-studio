@@ -30,7 +30,8 @@ import os
 import threading
 from typing import Any, Callable, Dict, List, Optional, Tuple
 
-from .. import __version__, dsp, eq, library, preamp, quicktune, sharecode, transfer
+from .. import (__version__, dsp, eq, keepawake, library, preamp, quicktune, sharecode,
+                transfer)
 from ..store import THEMES, Store, band_to_dict
 
 logger = logging.getLogger(__name__)
@@ -104,6 +105,8 @@ class Api:
         self._lock = threading.RLock()
         self._rev = 0
         self._settings = store.load_settings()
+        if self._settings.get("keep_awake"):
+            keepawake.start()        # the CHU 2 clicks when its amplifier wakes (test #36)
         self._connected = False
         self._device_error: Optional[Dict[str, str]] = None
         self._eq_on = True
@@ -271,12 +274,24 @@ class Api:
 
     # ---- settings (brief S10) ---------------------------------------------------------- #
     def set_setting(self, key: str, value: Any) -> Dict[str, Any]:
-        """``theme`` (one of THEMES) or ``confirm_save`` (bool)."""
+        """``theme`` (one of THEMES), or ``confirm_save``, ``keep_awake`` and
+        ``start_with_windows`` (bool)."""
         if key == "theme":
             if value not in THEMES:
                 raise ValueError(f"unknown theme {value!r}")
         elif key == "confirm_save":
             value = bool(value)
+        elif key == "keep_awake":
+            value = bool(value)
+            # Stores what the user asked for even if the silence refuses to play, so the
+            # switch stays where they put it; `keep_awake_running` reports the truth.
+            keepawake.start() if value else keepawake.stop()
+        elif key == "start_with_windows":
+            # Not stored: the file in the Startup folder *is* the state, so deleting it by
+            # hand cannot leave the switch lying.
+            keepawake.enable_startup() if value else keepawake.disable_startup()
+            with self._lock:
+                return self._changed()
         else:
             raise ValueError(f"unknown setting {key!r}")
         with self._lock:
@@ -613,7 +628,11 @@ class Api:
             "edited": self._edited,
             "auto_preamp": bool(self._settings.get("auto_preamp", True)),
             "settings": {"theme": self._settings.get("theme", "atelier"),
-                         "confirm_save": bool(self._settings.get("confirm_save", True))},
+                         "confirm_save": bool(self._settings.get("confirm_save", True)),
+                         "keep_awake": bool(self._settings.get("keep_awake", False)),
+                         "keep_awake_ok": keepawake.available(),
+                         "keep_awake_running": keepawake.running(),
+                         "start_with_windows": keepawake.startup_enabled()},
             "name": self._name,
             "quick": dict(self._quick) if self._quick else None,
             "version": __version__,

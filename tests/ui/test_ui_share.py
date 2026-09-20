@@ -22,7 +22,7 @@ def test_import_file_shows_a_preview_then_imports(open_app, calls):
         "HD 600 ParametricEQ · Equalizer APO / AutoEq text · 7 filters · Preamp −6.2 dB")
     assert _statuses(page) == ["fits", "fits", "not kept (5 bands)", "fits", "fits", "not kept (5 bands)", "fits"]
     assert page.locator("[data-test=preview-table] tr.row-off").count() == 2
-    assert "keeping the 5 largest" in page.inner_text("[data-test=preview-notes]")
+    assert "keeping the 5 that come closest" in page.inner_text("[data-test=preview-notes]")
     assert calls(page, "set_design") == []  # nothing changes before "Import to editor"
     page.click("[data-test=import-apply]")
     _called(page, "set_design")

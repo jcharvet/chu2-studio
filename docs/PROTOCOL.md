@@ -170,11 +170,16 @@ cmd:  0x52 'R' read · 0x57 'W' write · 0x53 'S' commit (reg 0x00) · 0x43 'C' 
 | `0x24` | EQ slot: `0x03` = custom/on, `0x02` = off | v0 = slot (send v0 = `0x03` on read too) |
 | `0x26 + 2*i` | band *i* (0–4) gain + frequency | v0-v1 = gain × 10, signed LE16 · v2-v3 = Hz, LE16 |
 | `0x27 + 2*i` | band *i* Q + type | v0-v1 = Q × 1000, LE16 · v2 = type (0 PK, 3 low shelf, 4 high shelf) |
+| `0x30`-`0x35`, `0x38`-`0x3F` | zeros: there is no sixth band (test #35) | — |
+| `0x36` `0x40` `0x48` `0x50` `0x5B` | device identity, ASCII: `PerfCfg:`, `KTMicro`, `Chu2 DSP`, `2020-02-20-0000-0000-0000`, then VID/PID `b2 31 13 01` | read-only, not tried |
 | `0x66` | pregain | v0 = dB, signed byte (writes ack and read back, but have no audible effect live — tests #19–#20) |
 
 Write sequence used by devicePEQ: read `0x24`; if it is `0x02`, write `0x24` =
 `0x03`; write the 10 band registers; send commit `[00 00 00 00 53 00 00 00 00 00]`;
 wait ~1 s. The CHU 2 answers every write with `v0 = 0x03`.
+
+Commit ignores the register byte (test #34): `0x53` sent at `0x66` restarts the CHU 2 just
+like `0x53` at `0x00`. There is one save, not one store per register.
 
 Why the brute force missed it: every probe had `0x00` in byte 4, the command byte.
 

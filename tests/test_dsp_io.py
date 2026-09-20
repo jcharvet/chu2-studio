@@ -61,6 +61,24 @@ def test_set_slot_writes_register_0x24_without_commit():
     assert fake.live[0x24][0] == dsp.KT_SLOT_OFF and fake.commits == 0
 
 
+class _DropsFirstReply(FakeChu2):
+    """A CHU 2 that loses the very first reply, as a busy USB bus sometimes does."""
+
+    def read(self, length: int = 64, timeout: int = 1000) -> bytes:
+        reply = super().read(length, timeout)
+        if not getattr(self, "_dropped", False):
+            self._dropped = True
+            return b""
+        return reply
+
+
+def test_one_lost_reply_is_retried_not_an_error():
+    fake = _DropsFirstReply()
+    slot, bands = dsp.kt_read_eq(fake)
+    assert slot == dsp.KT_SLOT_ON
+    assert bands[1].gain == -6.0
+
+
 def test_silent_device_raises_usb_error():
     fake = FakeChu2()
     fake.silent = True

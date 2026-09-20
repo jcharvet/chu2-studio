@@ -17,10 +17,12 @@ const CATEGORIES = [
   { id: "music", label: "Music", test: (p) => p.tags.includes("Music") },
   { id: "movies", label: "Movies", test: (p) => p.tags.includes("Movies") },
   { id: "calls", label: "Calls", test: (p) => p.tags.includes("Calls") },
+  { id: "measured", label: "Measured", test: (p) => p.group === "measured" },
   { id: "mine", label: "Mine", test: (p) => p.group === "mine" },
 ];
 const TAGS = ["Gaming", "Music", "Movies", "Calls"];
-const GROUP_LABEL = { official: "Official", builtin: "Quick Tune scene", mine: "Yours" };
+const GROUP_LABEL = { official: "Official", builtin: "Quick Tune scene",
+                      measured: "Measured (AutoEq)", mine: "Yours" };
 
 export const PresetSheet = {
   components: { MiniCurve },

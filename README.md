@@ -54,8 +54,18 @@ do not want to keep them.
   — finer control than Moondrop's own FreeDSP cable offers.
 - **Hear before you save** — every change plays at once. Nothing is written to
   the earphones until you press Save.
-- **Import and share** — read AutoEq, Equalizer APO and Peace files (it keeps
-  the five biggest filters), export the same, or copy a short share code.
+- **Import and share** — read AutoEq, Equalizer APO and Peace files, export the
+  same, or copy a short share code. A file with ten filters will not fit five
+  bands, so it keeps the five whose combined curve comes closest to the whole
+  file, and tells you how far off that lands in dB.
+- **Six measured tunings** — the Chu 2 has been measured by crinacle,
+  HypetheSonics, Kazi, Super Review and ToneDeafMonk, and
+  [AutoEq](https://github.com/jaakkopasanen/AutoEq) turned each measurement into
+  a correction. All six are built in under Presets → Measured. Nothing is
+  downloaded; the app makes no network calls.
+- **Stop the clicking** — the CHU 2 switches its amplifier off when nothing is
+  playing and clicks when it comes back. Settings → Clicking keeps it awake, and
+  can carry on doing so when the app is closed.
 - **Presets** — a library with your own saved EQs and favourites.
 - **Safe by design** — the first time it connects, it saves your earphones'
   original EQ on your PC. "Restore original" puts it back at any time.
@@ -82,6 +92,18 @@ five bands will be, before anything changes:
   quietly lowers the whole EQ by the size of the biggest boost. That makes the
   sound quieter; turn your volume up when you compare.
 - **Unsaved changes are lost when you unplug.** The saved EQ comes back.
+- **A click before every sound is the earphones, not the app.** The CHU 2 mutes
+  its own amplifier whenever nothing is playing, and clicks when it switches back
+  on, so a video, a track or even a notification starts with a pop. Turn on
+  **Settings → Clicking → Stop the click before every sound**: it plays silence so
+  the amplifier never switches off. A second switch there keeps it going when the
+  app is closed, by putting one small file in your Startup folder — unticking it
+  deletes that file again.
+- **Crackling after the PC wakes from sleep is a different fault.** Windows powers
+  the CHU 2 down while idle and it comes back with its audio out of step; a restart
+  does not help, because the USB ports stay powered. Untick *Allow the computer to
+  turn off this device to save power* on the USB Composite Device in Device Manager,
+  or set USB selective suspend to Disabled in your power plan.
 - **It changes what you hear, not your microphone.**
 
 ## For developers
@@ -118,6 +140,9 @@ chu2 dsp restore       # back to the EQ found before the first write
 
 - [devicePEQ](https://github.com/jeromeof/devicePEQ) — the KTMicro command
   format that made this possible.
+- [AutoEq](https://github.com/jaakkopasanen/AutoEq) by Jaakko Pasanen (MIT) — the
+  six measured tunings under Presets → Measured, and the people who measured the
+  Chu 2 for them: crinacle, HypetheSonics, Kazi, Super Review and ToneDeafMonk.
 - [Catppuccin](https://github.com/catppuccin) (themes),
   [Phosphor Icons](https://phosphoricons.com/), Inter, Newsreader and
   JetBrains Mono (fonts), [Vue](https://vuejs.org/) — each under its own licence,
