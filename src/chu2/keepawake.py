@@ -9,9 +9,13 @@ What does *not* work, all tried on the hardware: a looping silent clip through
 that dither. The chip is not watching for an open stream, it is watching the
 signal level, and -90 dBFS does not count.
 
-What works is a 5 Hz tone at -45 dBFS. Five hertz is two octaves below hearing and
-a 10 mm driver cannot move air with it, so nobody hears a thing, but it is about
-5000 times stronger than a dither and the chip reads it as real audio.
+What works is a 5 Hz tone at -70 dBFS. Five hertz is well below hearing, and quiet
+enough that a sealed earphone does not turn it into anything you notice.
+
+The level matters more than it looks. Sealed in an ear canal the driver acts as a
+pressure source, not as a speaker in a room, so infrasound *does* reach you: at
+-45 dBFS the owner heard it as wings flapping, five times a second. -70 dBFS is
+inaudible and the chip still counts it.
 
 ``sounddevice`` is imported when the tone starts, not when this module is, so the
 tests and the CLI never need it. The stream is opened on the CHU 2 by name rather
@@ -33,7 +37,11 @@ logger = logging.getLogger(__name__)
 
 RATE = 48_000       # what Windows already runs the CHU 2 at
 TONE_HZ = 5.0       # below hearing, and below what the driver can reproduce
-TONE_DBFS = -45.0   # loud enough for the chip to count it, ~5000x a one-bit dither
+# Found by bracketing on the hardware: -90 dBFS is too quiet for the chip to notice,
+# -45 dBFS is loud enough for the owner to hear as a flutter, -70 dBFS is neither.
+# ponytail: one constant, no setting. If another CHU 2 ignores -70, raise it - but not
+# past about -60, which is where five flaps a second start to be audible again.
+TONE_DBFS = -70.0
 DEVICE_HINT = "Chu2"
 BLOCKSIZE = 1024
 

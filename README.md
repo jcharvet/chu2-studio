@@ -30,11 +30,11 @@ Not affiliated with, or endorsed by, Moondrop. MIT licence.
 
 Download from the [latest release](../../releases/latest) — either one works:
 
-- **`CHU2Studio-0.2.1-setup.exe`** — the installer. Puts CHU 2 Studio in your
+- **`CHU2Studio-0.2.2-setup.exe`** — the installer. Puts CHU 2 Studio in your
   Start menu, offers to start it with Windows, and uninstalls from Settings like
   any other program. It installs for you alone, so it never asks for an
   administrator.
-- **`CHU2Studio-0.2.1-win64.zip`** — no installing. Unzip it anywhere and run
+- **`CHU2Studio-0.2.2-win64.zip`** — no installing. Unzip it anywhere and run
   `CHU2Studio.exe`. To remove it, delete the folder.
 
 No admin rights and no driver either way. Windows 10 or 11, 64-bit. Your presets
