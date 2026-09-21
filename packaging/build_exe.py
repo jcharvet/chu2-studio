@@ -6,8 +6,14 @@ named after the zip, with ``CHU2Studio.exe`` directly inside.
     pip install -e ".[build]"
     python packaging/build_exe.py
 
-One folder, not one file: it starts faster, and antivirus tools flag
-self-extracting single files more often. After the build, the .exe is started
+One folder, not one file. Measured 2026-09-20: one file takes 2.21 s to a
+working window against 1.49 s, so +0.72 s on every launch, and antivirus tools
+flag self-extracting files more often. The blocker is ``main.unblock_own_files``
+though: it walks the folder holding ``sys.executable`` to clear Windows' internet
+mark, which is the app's own folder here but would be the user's Downloads with
+one file - so the app would strip that mark from unrelated files. Switching means
+pointing it at ``sys._MEIPASS`` first, and proving it on a genuinely downloaded
+zip, because that is the bug that made 0.1.0 unusable. After the build, the .exe is started
 once with ``--smoke-test`` (fake CHU 2, temporary data folder); the build fails
 if the page doesn't load. Licences: ours and Python's go next to the .exe,
 the dependencies' licences are in their ``*.dist-info`` folders under
@@ -47,6 +53,7 @@ def command() -> list:
         "--paths", os.path.join(ROOT, "src"),
         "--add-data", f"{UI}{os.pathsep}chu2/app/ui",
         "--icon", ICON,  # packaging/make_icon.py draws it
+        "--add-data", f"{ICON}{os.pathsep}.",  # chu2.app.tray paints the tray icon with it
         "--recursive-copy-metadata", "chu2-dsp",  # the dependencies' licence files
         "--exclude-module", "tkinter",
         "--exclude-module", "usb",  # research tools only (chu2.research)
@@ -96,7 +103,39 @@ def package() -> str:
     return shutil.make_archive(base, "zip", APP_DIR)
 
 
+ISCC_NAMES = [
+    os.path.join(os.environ.get("LOCALAPPDATA", ""), "Programs", "Inno Setup 6", "ISCC.exe"),
+    r"C:\Program Files (x86)\Inno Setup 6\ISCC.exe",
+    r"C:\Program Files\Inno Setup 6\ISCC.exe",
+]
+
+
+def installer() -> str:
+    """Build the per-user installer with Inno Setup, if it is here.
+
+    An installer is not just tidier: Windows does not mark files written by one, so an
+    installed copy never meets the problem ``main.unblock_own_files`` works around.
+    Returns the path, or "" when Inno Setup is missing - which is not a build failure,
+    because the zip is still the main download.
+    """
+    iscc = next((p for p in ISCC_NAMES if p and os.path.isfile(p)), "")
+    if not iscc:
+        print("Inno Setup not found, so no installer was built "
+              "(winget install --id JRSoftware.InnoSetup)")
+        return ""
+    script = os.path.join(os.path.dirname(os.path.abspath(__file__)), "installer.iss")
+    subprocess.run([iscc, f"/DMyAppVersion={__version__}", script], check=True,
+                   stdout=subprocess.DEVNULL)
+    out = os.path.join(DIST, f"{NAME}-{__version__}-setup.exe")
+    if not os.path.isfile(out):
+        sys.exit(f"Inno Setup reported success but {out} is not there")
+    return out
+
+
 if __name__ == "__main__":
     build()
     check()
     print("zip:", package())
+    made = installer()
+    if made:
+        print("installer:", made)

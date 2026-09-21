@@ -1,139 +1,138 @@
-"""Hold an audio stream open so the CHU 2 stops clicking (test #36).
+"""Keep the CHU 2's amplifier awake, so it stops clicking (test #36, #37).
 
-The CHU 2 mutes its own amplifier whenever nothing is playing, and clicks when it
-switches back on, so a video, a track or even a notification starts with a pop.
-Looping one second of silence keeps the stream open and the amplifier engaged.
+The CHU 2 mutes its own amplifier when it sees no audio for about half a minute,
+and clicks when it switches back on, so a video, a track or even a notification
+starts with a pop.
 
-``winsound`` is part of the standard library on Windows and absent everywhere
-else, so :func:`available` is False off Windows and the tests replace the module.
+What does *not* work, all tried on the hardware: a looping silent clip through
+``winsound``, the same clip carrying a one-bit dither, and a continuous stream of
+that dither. The chip is not watching for an open stream, it is watching the
+signal level, and -90 dBFS does not count.
 
-ponytail: silence through winsound, no audio library and no service. It plays to
-whatever Windows has as the default output, so switching headphones stops it
-working until it is turned off and on again.
+What works is a 5 Hz tone at -45 dBFS. Five hertz is two octaves below hearing and
+a 10 mm driver cannot move air with it, so nobody hears a thing, but it is about
+5000 times stronger than a dither and the chip reads it as real audio.
+
+``sounddevice`` is imported when the tone starts, not when this module is, so the
+tests and the CLI never need it. The stream is opened on the CHU 2 by name rather
+than on whatever Windows calls the default output, so switching headphones does
+not quietly stop it working.
+
+ponytail: array and math build one cycle, no numpy, which would have cost about
+15 MB in the .exe for one sine wave.
 """
 
 from __future__ import annotations
 
+import array
 import logging
-import os
-import struct
-import tempfile
-import wave
+import math
 from typing import Any, Optional
 
 logger = logging.getLogger(__name__)
 
-RATE = 48_000  # what Windows already runs the CHU 2 at
-SECONDS = 1
-FILENAME = "chu2_silence.wav"
+RATE = 48_000       # what Windows already runs the CHU 2 at
+TONE_HZ = 5.0       # below hearing, and below what the driver can reproduce
+TONE_DBFS = -45.0   # loud enough for the chip to count it, ~5000x a one-bit dither
+DEVICE_HINT = "Chu2"
+BLOCKSIZE = 1024
 
-try:  # pragma: no cover - the import itself is the platform check
-    import winsound as _player  # type: ignore
-except ImportError:  # pragma: no cover
-    _player = None  # type: ignore
+backend: Optional[Any] = None   # the tests put a stand-in here
+_stream: Any = None
 
-player: Optional[Any] = _player
-_running = False
+
+def _sounddevice() -> Any:
+    global backend
+    if backend is None:
+        import sounddevice  # noqa: PLC0415 - only when the tone is actually wanted
+
+        backend = sounddevice
+    return backend
 
 
 def available() -> bool:
-    """True where silence can be played at all (Windows)."""
-    return player is not None
-
-
-def running() -> bool:
-    return _running
-
-
-def silence_path() -> str:
-    """Write the silent clip if it isn't there, and return its path."""
-    path = os.path.join(tempfile.gettempdir(), FILENAME)
-    if not os.path.exists(path):
-        with wave.open(path, "wb") as handle:
-            handle.setnchannels(2)
-            handle.setsampwidth(2)
-            handle.setframerate(RATE)
-            handle.writeframes(struct.pack("<h", 0) * 2 * RATE * SECONDS)
-    return path
-
-
-# What gets written into the Startup folder. A .pyw runs through pythonw, so there is no
-# console window and no shortcut, no COM and no .vbs to go wrong. Deleting the file is how
-# the switch turns off. Kept as one string so the silence has a single source in the repo.
-STARTUP_NAME = "CHU 2 - stop the clicking.pyw"
-STARTUP_SOURCE = f"""# Written by CHU 2 Studio: Settings -> Clicking -> start with Windows.
-# Delete this file, or turn the switch off in the app, to stop it.
-import struct, os, tempfile, time, wave, winsound
-
-path = os.path.join(tempfile.gettempdir(), {FILENAME!r})
-with wave.open(path, "wb") as handle:
-    handle.setnchannels(2)
-    handle.setsampwidth(2)
-    handle.setframerate({RATE})
-    handle.writeframes(struct.pack("<h", 0) * 2 * {RATE} * {SECONDS})
-winsound.PlaySound(path, winsound.SND_FILENAME | winsound.SND_ASYNC | winsound.SND_LOOP)
-while True:
-    time.sleep(3600)
-"""
-
-
-def startup_dir() -> str:
-    """Where Windows looks for things to run at login."""
-    return os.path.join(os.environ.get("APPDATA", tempfile.gettempdir()),
-                        "Microsoft", "Windows", "Start Menu", "Programs", "Startup")
-
-
-def startup_path() -> str:
-    return os.path.join(startup_dir(), STARTUP_NAME)
-
-
-def startup_enabled() -> bool:
-    return os.path.exists(startup_path())
-
-
-def enable_startup() -> bool:
-    """Write the login file. True if it is there afterwards."""
+    """True where the tone can be played at all."""
     try:
-        os.makedirs(startup_dir(), exist_ok=True)
-        with open(startup_path(), "w", encoding="utf-8") as handle:
-            handle.write(STARTUP_SOURCE)
-    except OSError as exc:
-        logger.warning("could not write the startup file: %s", exc)
+        _sounddevice()
+    except Exception as exc:  # pragma: no cover - depends on the machine
+        logger.debug("no audio output: %s", exc)
         return False
     return True
 
 
-def disable_startup() -> None:
+def running() -> bool:
+    return _stream is not None
+
+
+def one_cycle() -> bytes:
+    """One whole cycle of the tone, stereo 16-bit. 5 Hz at 48 kHz is 9600 samples."""
+    peak = int(32767 * 10 ** (TONE_DBFS / 20))
+    frames = int(RATE / TONE_HZ)
+    samples = array.array("h")
+    for n in range(frames):
+        value = int(peak * math.sin(2 * math.pi * n / frames))
+        samples.append(value)
+        samples.append(value)
+    return samples.tobytes()
+
+
+def _find_device(sd: Any) -> Optional[int]:
+    """The CHU 2 itself, not whatever Windows calls the default output."""
     try:
-        os.remove(startup_path())
-    except FileNotFoundError:
-        pass
-    except OSError as exc:  # pragma: no cover
-        logger.warning("could not remove the startup file: %s", exc)
+        for index, device in enumerate(sd.query_devices()):
+            if DEVICE_HINT in device["name"] and device["max_output_channels"] > 0:
+                return index
+    except Exception as exc:  # pragma: no cover
+        logger.debug("could not list the sound devices: %s", exc)
+    return None
 
 
 def start() -> bool:
-    """Loop silence. True if it is now playing."""
-    global _running
-    if player is None:
-        return False
-    if _running:
+    """Play the tone. True if it is now playing."""
+    global _stream
+    if _stream is not None:
         return True
     try:
-        player.PlaySound(silence_path(),
-                         player.SND_FILENAME | player.SND_ASYNC | player.SND_LOOP)
-    except (OSError, RuntimeError) as exc:
-        logger.warning("could not start the silence: %s", exc)
+        sd = _sounddevice()
+    except Exception as exc:
+        # No sound card at all is a fact about the machine, not a fault to warn about.
+        logger.debug("no audio output: %s", exc)
         return False
-    _running = True
+    try:
+        cycle = one_cycle()
+        span = len(cycle)
+        position = 0
+
+        def callback(out: Any, frames: int, _time: Any, _status: Any) -> None:
+            nonlocal position
+            need = frames * 4  # two channels of 16-bit
+            chunk = bytearray()
+            while len(chunk) < need:
+                take = min(need - len(chunk), span - position)
+                chunk += cycle[position:position + take]
+                position = (position + take) % span
+            out[:] = bytes(chunk)
+
+        stream = sd.RawOutputStream(device=_find_device(sd), samplerate=RATE, channels=2,
+                                    dtype="int16", callback=callback, blocksize=BLOCKSIZE)
+        stream.start()
+    except Exception as exc:
+        logger.warning("the CHU 2 will click before every sound: %s", exc)
+        return False
+    _stream = stream
+    logger.info("playing a %.0f Hz tone at %.0f dBFS, so the CHU 2 will not click",
+                TONE_HZ, TONE_DBFS)
     return True
 
 
 def stop() -> None:
-    global _running
-    if player is not None and _running:
-        try:
-            player.PlaySound(None, player.SND_PURGE)
-        except (OSError, RuntimeError) as exc:  # pragma: no cover
-            logger.warning("could not stop the silence: %s", exc)
-    _running = False
+    global _stream
+    if _stream is None:
+        return
+    logger.info("stopped the tone, so the CHU 2 will click again")
+    try:
+        _stream.stop()
+        _stream.close()
+    except Exception as exc:  # pragma: no cover
+        logger.warning("could not stop the tone: %s", exc)
+    _stream = None

@@ -31,23 +31,33 @@ jobs:
       - name: Tests
         run: python -m pytest -q tests
 
-      - name: Build the .exe and the zip
+      # Inno Setup builds the installer. Windows does not mark files written by an
+      # installer, so an installed copy never meets the problem the zip works around.
+      - name: Install Inno Setup
+        run: choco install innosetup --no-progress -y
+
+      - name: Build the .exe, the zip and the installer
         run: python packaging/build_exe.py
 
       - uses: actions/upload-artifact@v4
         with:
           name: CHU2Studio-win64
-          path: dist/CHU2Studio-*-win64.zip
+          path: |
+            dist/CHU2Studio-*-win64.zip
+            dist/CHU2Studio-*-setup.exe
           if-no-files-found: error
 
-      - name: Attach the zip to the release
+      - name: Attach the downloads to the release
         if: startsWith(github.ref, 'refs/tags/v')
         env:
           GH_TOKEN: ${{ github.token }}
         run: |
-          $zip = Get-ChildItem dist/CHU2Studio-*-win64.zip
-          (Get-FileHash $zip.FullName -Algorithm SHA256).Hash.ToLower() | Out-File "$($zip.FullName).sha256" -Encoding ascii
+          $files = @()
+          foreach ($item in (Get-ChildItem dist/CHU2Studio-*-win64.zip, dist/CHU2Studio-*-setup.exe)) {
+            (Get-FileHash $item.FullName -Algorithm SHA256).Hash.ToLower() | Out-File "$($item.FullName).sha256" -Encoding ascii
+            $files += $item.FullName, "$($item.FullName).sha256"
+          }
           # the release usually exists already (notes are written by hand); make one if not
           gh release view $env:GITHUB_REF_NAME *> $null
           if ($LASTEXITCODE -ne 0) { gh release create $env:GITHUB_REF_NAME --title "CHU 2 Studio $($env:GITHUB_REF_NAME -replace '^v')" --generate-notes }
-          gh release upload $env:GITHUB_REF_NAME $zip.FullName "$($zip.FullName).sha256" --clobber
+          gh release upload $env:GITHUB_REF_NAME $files --clobber

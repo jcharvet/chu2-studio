@@ -33,6 +33,7 @@ from typing import Any, Callable, Dict, List, Optional, Tuple
 from .. import (__version__, dsp, eq, keepawake, library, preamp, quicktune, sharecode,
                 transfer)
 from ..store import THEMES, Store, band_to_dict
+from . import autostart
 
 logger = logging.getLogger(__name__)
 
@@ -106,7 +107,10 @@ class Api:
         self._rev = 0
         self._settings = store.load_settings()
         if self._settings.get("keep_awake"):
-            keepawake.start()        # the CHU 2 clicks when its amplifier wakes (test #36)
+            # The CHU 2 clicks when its amplifier wakes (test #36). Say so either way:
+            # a switch that claims to be on while nothing plays is worse than no switch.
+            if not keepawake.start() and keepawake.available():
+                logger.warning("the clicking switch is on but no silence is playing")
         self._connected = False
         self._device_error: Optional[Dict[str, str]] = None
         self._eq_on = True
@@ -287,9 +291,9 @@ class Api:
             # switch stays where they put it; `keep_awake_running` reports the truth.
             keepawake.start() if value else keepawake.stop()
         elif key == "start_with_windows":
-            # Not stored: the file in the Startup folder *is* the state, so deleting it by
+            # Not stored: Windows' own Run key *is* the state, so removing the entry by
             # hand cannot leave the switch lying.
-            keepawake.enable_startup() if value else keepawake.disable_startup()
+            autostart.enable() if value else autostart.disable()
             with self._lock:
                 return self._changed()
         else:
@@ -632,7 +636,8 @@ class Api:
                          "keep_awake": bool(self._settings.get("keep_awake", False)),
                          "keep_awake_ok": keepawake.available(),
                          "keep_awake_running": keepawake.running(),
-                         "start_with_windows": keepawake.startup_enabled()},
+                         "start_with_windows": autostart.enabled(),
+                         "start_with_windows_ok": autostart.available()},
             "name": self._name,
             "quick": dict(self._quick) if self._quick else None,
             "version": __version__,

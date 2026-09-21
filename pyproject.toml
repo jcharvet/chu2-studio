@@ -4,7 +4,7 @@ build-backend = "setuptools.build_meta"
 
 [project]
 name = "chu2-dsp"
-version = "0.1.1"
+version = "0.2.0"
 description = "Open-source DSP control tool for the Moondrop CHU 2 (KTMicro DSP)"
 readme = "README.md"
 requires-python = ">=3.9"
@@ -22,7 +22,9 @@ classifiers = [
 ]
 dependencies = [
     "hidapi>=0.14.0",
+    "pystray>=0.19.5",  # the tray icon (chu2.app.tray); pulls in Pillow
     "pywebview>=6.2",
+    "sounddevice>=0.4.6",  # the tone that stops the clicking (chu2.keepawake)
 ]
 
 [project.urls]
@@ -32,7 +34,6 @@ Issues = "https://github.com/jcharvet/chu2-studio/issues"
 [project.optional-dependencies]
 research = ["pyusb>=1.2.1"]  # old probe scripts; needs a Zadig driver
 gui = ["matplotlib>=3.7.0"]
-audio = ["sounddevice>=0.4.6"]
 dev = ["pytest>=7.0", "playwright>=1.49"]
 build = ["pyinstaller>=6.22"]  # packaging/build_exe.py
 

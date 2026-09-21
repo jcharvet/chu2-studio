@@ -28,20 +28,26 @@ Not affiliated with, or endorsed by, Moondrop. MIT licence.
 
 ## Install
 
-1. Download `CHU2Studio-0.1.1-win64.zip` from the
-   [latest release](../../releases/latest).
-2. Unzip it anywhere, for example `Documents\CHU2Studio`.
-3. Run `CHU2Studio.exe`.
+Download from the [latest release](../../releases/latest) — either one works:
 
-No installer, no admin rights, no driver. Windows 10 or 11, 64-bit.
+- **`CHU2Studio-0.2.0-setup.exe`** — the installer. Puts CHU 2 Studio in your
+  Start menu, offers to start it with Windows, and uninstalls from Settings like
+  any other program. It installs for you alone, so it never asks for an
+  administrator.
+- **`CHU2Studio-0.2.0-win64.zip`** — no installing. Unzip it anywhere and run
+  `CHU2Studio.exe`. To remove it, delete the folder.
+
+No admin rights and no driver either way. Windows 10 or 11, 64-bit. Your presets
+and settings live in `%APPDATA%\CHU2Studio` and are left alone by the
+uninstaller.
 
 The app is not signed yet, so Windows may show "Windows protected your PC".
 Choose **More info → Run anyway**. The `.exe` is built from this repository with
 `python packaging/build_exe.py`, so you can also build your own.
 
-To uninstall, delete the folder. Your presets and settings live in
-`%APPDATA%\CHU2Studio` (Settings → Open data folder), so delete that too if you
-do not want to keep them.
+To remove everything, uninstall (or delete the folder) and then delete
+`%APPDATA%\CHU2Studio` (Settings → Open data folder), which holds your presets,
+settings and the backup of your earphones' original EQ.
 
 ## What it does
 
@@ -63,9 +69,15 @@ do not want to keep them.
   [AutoEq](https://github.com/jaakkopasanen/AutoEq) turned each measurement into
   a correction. All six are built in under Presets → Measured. Nothing is
   downloaded; the app makes no network calls.
-- **Stop the clicking** — the CHU 2 switches its amplifier off when nothing is
-  playing and clicks when it comes back. Settings → Clicking keeps it awake, and
-  can carry on doing so when the app is closed.
+- **No clicking** — the CHU 2 switches its amplifier off when it sees no audio
+  for about half a minute, and clicks when it comes back, so every video, track
+  and notification starts with a pop. The app plays it a 5 Hz tone, below hearing
+  and below what the drivers can reproduce, so the chip stays awake and you hear
+  nothing. On by default.
+- **Lives in the tray** — closing the window hides the app instead of quitting,
+  so the clicking stays away and your earphones stay connected. Right-click the
+  tray icon to show it, flip the clicking switch, or quit for real. It can start
+  with Windows, straight into the tray.
 - **Presets** — a library with your own saved EQs and favourites.
 - **Safe by design** — the first time it connects, it saves your earphones'
   original EQ on your PC. "Restore original" puts it back at any time.
@@ -94,16 +106,22 @@ five bands will be, before anything changes:
 - **Unsaved changes are lost when you unplug.** The saved EQ comes back.
 - **A click before every sound is the earphones, not the app.** The CHU 2 mutes
   its own amplifier whenever nothing is playing, and clicks when it switches back
-  on, so a video, a track or even a notification starts with a pop. Turn on
-  **Settings → Clicking → Stop the click before every sound**: it plays silence so
-  the amplifier never switches off. A second switch there keeps it going when the
-  app is closed, by putting one small file in your Startup folder — unticking it
-  deletes that file again.
+  on, so a video, a track or even a notification starts with a pop. CHU 2 Studio
+  stops that out of the box by playing silence, and closing the window leaves the
+  app in the tray so it keeps working. **Settings → Starting** can have it there
+  from login. Turn it off in **Settings → Clicking** if you use an app that takes
+  exclusive control of the sound card.
 - **Crackling after the PC wakes from sleep is a different fault.** Windows powers
   the CHU 2 down while idle and it comes back with its audio out of step; a restart
   does not help, because the USB ports stay powered. Untick *Allow the computer to
   turn off this device to save power* on the USB Composite Device in Device Manager,
   or set USB selective suspend to Disabled in your power plan.
+- **Use one equaliser, not two.** The EQ lives in the cable, so leave Windows'
+  own enhancements off and do not run Equalizer APO or Peace on the same device
+  at the same time. Two layers add up: a +3 dB bass shelf here plus another in
+  Windows is +6 dB, which distorts. The app works out how much headroom its own
+  five bands need, but it cannot see anything stacked on top, so that protection
+  quietly stops being enough.
 - **It changes what you hear, not your microphone.**
 
 ## For developers

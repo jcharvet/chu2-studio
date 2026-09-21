@@ -25,7 +25,10 @@ from . import eq
 APP_DIR_ENV = "CHU2STUDIO_HOME"
 THEMES = ("atelier", "mocha", "sage", "latte", "porcelain")
 DEFAULT_SETTINGS: Dict[str, Any] = {"auto_preamp": True, "theme": "atelier",
-                                   "confirm_save": True, "keep_awake": False}
+                                   "confirm_save": True,
+                                   # On: the CHU 2 clicks before every sound otherwise
+                                   # (test #36), and nobody wants that. See chu2.keepawake.
+                                   "keep_awake": True}
 
 logger = logging.getLogger(__name__)
 

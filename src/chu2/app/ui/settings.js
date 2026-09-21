@@ -87,18 +87,30 @@ export const SettingsDialog = {
                    @change="setSetting('keep_awake', $event.target.checked)">
             Stop the click before every sound
           </label>
+          <p class="meta" data-test="keep-awake-state">
+            <template v-if="!state.settings.keep_awake_ok">Not available on this computer.</template>
+            <template v-else-if="state.settings.keep_awake && state.settings.keep_awake_running">
+              Playing silence now — your CHU 2 will not click.</template>
+            <template v-else-if="state.settings.keep_awake">
+              Switched on, but no silence is playing. Turn it off and on again.</template>
+            <template v-else>Off — the CHU 2 will click before every sound.</template>
+          </p>
+          <p class="meta">On by default, because the CHU 2 switches its amplifier off when it sees no
+            audio for about half a minute, and clicks when it comes back — every video, track and
+            notification starts with a pop. CHU 2 Studio plays it a 5 Hz tone, two octaves below hearing
+            and far below what the drivers can reproduce, so the chip counts it as audio and you hear
+            nothing. It goes to the CHU 2 itself, not to whatever Windows calls the default output. Turn
+            it off if you use an app that takes exclusive control of the sound card.</p>
+          <h3 class="eyebrow">Starting</h3>
           <label class="toggle">
             <input type="checkbox" data-test="start-with-windows"
-                   :disabled="!state.settings.keep_awake_ok"
+                   :disabled="!state.settings.start_with_windows_ok"
                    :checked="state.settings.start_with_windows"
                    @change="setSetting('start_with_windows', $event.target.checked)">
-            Keep doing it when the app is closed (starts with Windows)
+            Start CHU 2 Studio when Windows starts
           </label>
-          <p class="meta">The CHU 2 switches its amplifier off when nothing is playing and clicks when it
-            comes back, so videos, tracks and notifications all start with a pop. This plays silence to
-            keep it awake. It follows whatever Windows uses as the default output, so turn it off and on
-            again if you swap headphones. The second switch puts a small file in your Startup folder so the
-            silence carries on when CHU 2 Studio is shut; unticking it deletes that file.</p>
+          <p class="meta">It opens straight into the tray, so the clicking never comes back. This is one
+            entry in Windows' own list of programs to start; unticking it removes the entry.</p>
           <h3 class="eyebrow">Your data</h3>
           <p class="meta">The backup of your CHU 2's original EQ, your presets, settings and the log stay on this PC.</p>
           <div class="actions actions-start">

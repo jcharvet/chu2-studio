@@ -10,6 +10,7 @@ import threading
 import time
 
 from chu2 import dsp, eq, keepawake, quicktune
+from chu2.app import autostart
 from chu2.app.api import DEFAULT_DESIGN, Api
 from chu2.device_service import DeviceService
 from chu2.fake_device import FakePlug
@@ -627,9 +628,11 @@ def test_export_through_the_save_dialog(tmp_path):
 def test_settings_theme_and_confirm_save(tmp_path):
     rig = Rig(tmp_path, present=False)
     assert rig.state()["settings"] == {
-        "theme": "atelier", "confirm_save": True, "keep_awake": False,
+        "theme": "atelier", "confirm_save": True,
+        "keep_awake": True,  # on by default: the CHU 2 clicks before every sound otherwise
         "keep_awake_ok": keepawake.available(), "keep_awake_running": False,
-        "start_with_windows": keepawake.startup_enabled()}
+        "start_with_windows": autostart.enabled(),
+        "start_with_windows_ok": autostart.available()}
     s = rig.api.set_setting("theme", "mocha")
     assert s["settings"]["theme"] == "mocha" and rig.store.load_settings()["theme"] == "mocha"
     for key, value in (("theme", "neon"), ("volume", 3)):
@@ -646,70 +649,141 @@ def test_open_the_data_folder(tmp_path):
     rig.api._open_folder = opened.append
     assert rig.api.open_data_folder() == {"folder": rig.store.root} and opened == [rig.store.root]
 
-class _FakePlayer:
-    """Stands in for winsound: no sound is played in a test."""
-
-    SND_FILENAME = 1
-    SND_ASYNC = 2
-    SND_LOOP = 4
-    SND_PURGE = 8
+class _FakeAudio:
+    """Stands in for sounddevice: no sound card is opened in a test."""
 
     def __init__(self):
-        self.calls = []
+        self.streams = []
 
-    def PlaySound(self, sound, flags):  # noqa: N802 - winsound's own name
-        self.calls.append((sound, flags))
+    def query_devices(self):
+        return [{"name": "Headphones (Chu2 DSP)", "max_output_channels": 2}]
+
+    def RawOutputStream(self, **kwargs):  # noqa: N802 - sounddevice's own name
+        stream = _FakeStream(kwargs)
+        self.streams.append(stream)
+        return stream
 
 
-def test_keep_awake_loops_silence_and_stops(tmp_path, monkeypatch):
-    """The CHU 2 clicks when its amplifier wakes, so the switch holds a stream open."""
-    fake = _FakePlayer()
-    monkeypatch.setattr(keepawake, "player", fake)
-    monkeypatch.setattr(keepawake, "_running", False)
+class _FakeStream:
+    def __init__(self, kwargs):
+        self.kwargs = kwargs
+        self.state = "new"
+
+    def start(self):
+        self.state = "started"
+
+    def stop(self):
+        self.state = "stopped"
+
+    def close(self):
+        self.state = "closed"
+
+
+def _fake_audio(monkeypatch):
+    audio = _FakeAudio()
+    monkeypatch.setattr(keepawake, "_sounddevice", lambda: audio)
+    monkeypatch.setattr(keepawake, "_stream", None)
+    return audio
+
+
+def test_keep_awake_plays_the_tone_and_stops(tmp_path, monkeypatch):
+    """The CHU 2 mutes its amplifier without real audio, so the app gives it some."""
+    audio = _fake_audio(monkeypatch)
     rig = Rig(tmp_path, present=False)
 
     state = rig.api.set_setting("keep_awake", True)
     assert state["settings"]["keep_awake"] is True
     assert state["settings"]["keep_awake_running"] is True
-    assert rig.store.load_settings()["keep_awake"] is True
-    [(clip, flags)] = fake.calls
-    assert clip.endswith(keepawake.FILENAME)
-    assert flags == fake.SND_FILENAME | fake.SND_ASYNC | fake.SND_LOOP
+    [stream] = audio.streams
+    assert stream.state == "started"
+    assert stream.kwargs["device"] == 0, "it must pick the CHU 2, not the default output"
+    assert stream.kwargs["samplerate"] == keepawake.RATE
 
     assert rig.api.set_setting("keep_awake", True)["settings"]["keep_awake"] is True
-    assert len(fake.calls) == 1, "asking twice must not restart the silence"
+    assert len(audio.streams) == 1, "asking twice must not open a second stream"
 
     state = rig.api.set_setting("keep_awake", False)
-    assert state["settings"]["keep_awake"] is False
     assert state["settings"]["keep_awake_running"] is False
-    assert fake.calls[-1] == (None, fake.SND_PURGE)
+    assert stream.state == "closed"
 
 
 def test_keep_awake_starts_itself_when_it_was_left_on(tmp_path, monkeypatch):
-    fake = _FakePlayer()
-    monkeypatch.setattr(keepawake, "player", fake)
-    monkeypatch.setattr(keepawake, "_running", False)
+    audio = _fake_audio(monkeypatch)
     store = Store(str(tmp_path / "app"))
     store.save_settings(dict(store.load_settings(), keep_awake=True))
     rig = Rig(tmp_path, present=False, store=store)
-    assert fake.calls and fake.calls[0][0].endswith(keepawake.FILENAME)
+    assert audio.streams and audio.streams[0].state == "started"
     assert rig.state()["settings"]["keep_awake_running"] is True
+    keepawake.stop()
 
-def test_start_with_windows_writes_and_removes_one_file(tmp_path, monkeypatch):
-    """The file in the Startup folder is the state, so it is never stored twice."""
-    startup = tmp_path / "Startup"
-    monkeypatch.setattr(keepawake, "startup_dir", lambda: str(startup))
+
+def test_the_tone_is_below_hearing_and_inaudible():
+    """5 Hz at -45 dBFS: the chip counts it as audio, the ear never hears it."""
+    import struct
+
+    cycle = keepawake.one_cycle()
+    values = struct.unpack(f"<{len(cycle) // 2}h", cycle)
+    assert keepawake.TONE_HZ <= 20, "it must sit below hearing"
+    assert max(values) == int(32767 * 10 ** (keepawake.TONE_DBFS / 20))
+    assert max(values) < 32767 * 0.01, "under 1% of full scale"
+    assert len(values) // 2 == int(keepawake.RATE / keepawake.TONE_HZ), "a whole cycle"
+
+
+class _FakeRegistry:
+    """Enough of winreg to drive the switch without touching the real registry."""
+
+    HKEY_CURRENT_USER = "HKCU"
+    REG_SZ = 1
+    KEY_SET_VALUE = 2
+
+    def __init__(self):
+        self.values = {}
+        self.made = False
+
+    class _Key:
+        def __enter__(self):
+            return self
+
+        def __exit__(self, *exc):
+            return False
+
+    def OpenKey(self, root, path, reserved=0, access=0):  # noqa: N802 - winreg's own names
+        if not self.made:
+            raise FileNotFoundError(path)
+        return self._Key()
+
+    def CreateKey(self, root, path):  # noqa: N802
+        self.made = True
+        return self._Key()
+
+    def SetValueEx(self, key, name, reserved, kind, value):  # noqa: N802
+        self.values[name] = value
+
+    def QueryValueEx(self, key, name):  # noqa: N802
+        if name not in self.values:
+            raise FileNotFoundError(name)
+        return self.values[name], self.REG_SZ
+
+    def DeleteValue(self, key, name):  # noqa: N802
+        if name not in self.values:
+            raise FileNotFoundError(name)
+        del self.values[name]
+
+
+def test_start_with_windows_is_one_entry_that_can_be_removed(tmp_path, monkeypatch):
+    """Windows' own Run key is the state, so the app never stores it a second time."""
+    fake = _FakeRegistry()
+    monkeypatch.setattr(autostart, "winreg", fake)
     rig = Rig(tmp_path, present=False)
     assert rig.state()["settings"]["start_with_windows"] is False
 
     state = rig.api.set_setting("start_with_windows", True)
     assert state["settings"]["start_with_windows"] is True
-    [written] = list(startup.iterdir())
-    assert written.name == keepawake.STARTUP_NAME
-    compile(written.read_text(encoding="utf-8"), str(written), "exec")  # it must run at login
+    assert list(fake.values) == [autostart.VALUE_NAME]
+    assert "chu2" in fake.values[autostart.VALUE_NAME].lower()
     assert "start_with_windows" not in rig.store.load_settings()
 
     state = rig.api.set_setting("start_with_windows", False)
     assert state["settings"]["start_with_windows"] is False
-    assert list(startup.iterdir()) == []
+    assert fake.values == {}
     rig.api.set_setting("start_with_windows", False)  # removing it twice is not an error

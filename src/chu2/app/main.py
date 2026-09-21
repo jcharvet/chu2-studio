@@ -30,6 +30,7 @@ from .. import dsp
 from ..device_service import DeviceService
 from ..fake_device import FakePlug
 from ..store import THEMES, Store, default_root
+from . import tray
 from .api import Api
 
 TITLE = "CHU 2 Studio"
@@ -200,8 +201,18 @@ def main(argv: Optional[Sequence[str]] = None) -> int:
     import webview  # here, so tests and the CLI never need pywebview
 
     windows: List[Any] = []
+    # The tray keeps the app alive when the window closes, so the silence that stops the
+    # CHU 2 clicking (chu2.keepawake) carries on. Quit on the icon is the only real exit.
+    session: Dict[str, Any] = {"tray": None, "quitting": False, "told": False}
+
+    def close_window() -> None:
+        if session["tray"] is not None and not session["quitting"]:
+            hide_window()
+        else:
+            windows[0].destroy()
+
     pump = EventPump(lambda script: windows[0].evaluate_js(script))
-    api, service = build(pump.push, lambda: windows[0].destroy(),
+    api, service = build(pump.push, close_window,
                          fake_device=args.fake_device or args.smoke_test, store=store,
                          dialogs=Dialogs(lambda: windows[0]))
     theme = api.get_state()["settings"]["theme"]
@@ -209,12 +220,37 @@ def main(argv: Optional[Sequence[str]] = None) -> int:
                                    min_size=(1024, 700),
                                    background_color=THEME_BACKGROUND.get(theme, "#0A0B0F"))
     windows.append(window)
-    window.events.closing += api._on_window_closing  # False keeps the window open
+
+    def hide_window() -> None:
+        windows[0].hide()
+        if not session["told"] and session["tray"] is not None:
+            session["told"] = True
+            session["tray"].notify("Still running, so the clicking stays away. "
+                                   "Quit from this icon to stop.")
+
+    def on_closing() -> bool:
+        allowed = api._on_window_closing()  # False while it asks about unsaved changes
+        if allowed and session["tray"] is not None and not session["quitting"]:
+            hide_window()
+            return False
+        return allowed
+
+    window.events.closing += on_closing  # False keeps the window open
     page = {"ready": False}
+
+    def quit_app() -> None:
+        session["quitting"] = True
+        windows[0].destroy()
 
     def on_start() -> None:
         pump.start()
         service.start()
+        if not args.smoke_test:  # the smoke test has to exit on its own
+            icon = tray.Tray(on_show=lambda: windows[0].show(), on_quit=quit_app,
+                             clicking_stopped=lambda: bool(
+                                 api.get_state()["settings"]["keep_awake"]),
+                             set_clicking_stopped=lambda on: api.set_setting("keep_awake", on))
+            session["tray"] = icon if icon.start() else None
         if args.smoke_test:
             page["ready"] = _wait_for_page(window, SMOKE_PAGE_TIMEOUT_S)
             window.destroy()
@@ -222,6 +258,8 @@ def main(argv: Optional[Sequence[str]] = None) -> int:
     try:
         webview.start(on_start, http_server=True, debug=args.debug)
     finally:
+        if session["tray"] is not None:
+            session["tray"].stop()
         api._shutdown()
         pump.stop()
     return 0 if page["ready"] or not args.smoke_test else 1
