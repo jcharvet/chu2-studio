@@ -190,6 +190,25 @@ def _wait_for_page(window: Any, timeout: float = 30.0) -> bool:
     return False
 
 
+def _packaged_imports_work() -> bool:
+    """Check the libraries only used at runtime are really inside the .exe.
+
+    The tray and the tone are both loaded lazily, and the smoke test skips the tray so
+    it can exit, so a build could ship without either and nothing would notice until a
+    user read the log. 0.2.2 did exactly that: no pystray, so closing the window quit
+    the app instead of hiding it.
+    """
+    missing = []
+    for name in ("pystray", "sounddevice"):
+        try:
+            __import__(name)
+        except ImportError as exc:
+            missing.append(f"{name} ({exc})")
+    if missing:
+        logger.error("missing from this build: %s", ", ".join(missing))
+    return not missing
+
+
 def main(argv: Optional[Sequence[str]] = None) -> int:
     args = parse_args(argv)
     store = Store(tempfile.mkdtemp(prefix="chu2-smoke-")) if args.smoke_test else None
@@ -237,6 +256,9 @@ def main(argv: Optional[Sequence[str]] = None) -> int:
 
     window.events.closing += on_closing  # False keeps the window open
     page = {"ready": False}
+
+    if args.smoke_test and not _packaged_imports_work():
+        return 1
 
     def quit_app() -> None:
         session["quitting"] = True

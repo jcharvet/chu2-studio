@@ -6,7 +6,10 @@ switch useless, so the window now hides and the icon stays. **Quit** on the icon
 menu is the only thing that really exits.
 
 ``pystray`` and Pillow are imported when the tray starts, not when this module is
-imported, so the tests, the CLI and a machine without a tray never need them.
+imported, so the tests, the CLI and a machine without a tray never need them. It
+has to be a plain ``import pystray`` statement: PyInstaller reads those to decide
+what to bundle, and a dynamic ``__import__("pystray")`` is invisible to it, which
+once shipped an .exe with no tray at all.
 """
 
 from __future__ import annotations
@@ -59,7 +62,10 @@ class Tray:
         # Everything is inside the guard: a desktop with no tray, a missing Pillow or a
         # backend that raises must leave the app running, just without an icon.
         try:
-            pystray = self._backend or __import__("pystray")
+            if self._backend is not None:
+                pystray = self._backend
+            else:
+                import pystray  # noqa: PLC0415 - a plain import, so PyInstaller bundles it
             menu = pystray.Menu(
                 pystray.MenuItem("Show CHU 2 Studio", self._show, default=True),
                 pystray.MenuItem("Stop the click before every sound", self._toggle,

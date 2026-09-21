@@ -55,6 +55,10 @@ def command() -> list:
         "--icon", ICON,  # packaging/make_icon.py draws it
         "--add-data", f"{ICON}{os.pathsep}.",  # chu2.app.tray paints the tray icon with it
         "--recursive-copy-metadata", "chu2-dsp",  # the dependencies' licence files
+        # pystray picks its backend at import time, which PyInstaller cannot see, so it
+        # bundled nothing at all and 0.2.2 shipped with no tray. Name both explicitly.
+        "--hidden-import", "pystray",
+        "--hidden-import", "pystray._win32",
         "--exclude-module", "tkinter",
         "--exclude-module", "usb",  # research tools only (chu2.research)
     ]
@@ -84,6 +88,9 @@ def check() -> None:
         sys.exit("hidapi (hid.pyd) is missing from the build: the app couldn't find a real CHU 2")
     if not os.path.isfile(os.path.join(APP_DIR, "_internal", "chu2", "app", "ui", "index.html")):
         sys.exit("the page (chu2/app/ui) is missing from the build")
+    # pystray and sounddevice are checked by the smoke test itself (main._packaged_imports_work):
+    # PyInstaller puts pure-Python packages inside the .exe, not in _internal, so looking
+    # for a folder proves nothing. 0.2.2 shipped with no tray and only a log line showed it.
     try:
         result = subprocess.run([EXE, "--smoke-test"], timeout=SMOKE_TIMEOUT)
     except subprocess.TimeoutExpired:
