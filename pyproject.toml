@@ -4,7 +4,7 @@ build-backend = "setuptools.build_meta"
 
 [project]
 name = "chu2-dsp"
-version = "0.2.0"
+version = "0.2.1"
 description = "Open-source DSP control tool for the Moondrop CHU 2 (KTMicro DSP)"
 readme = "README.md"
 requires-python = ">=3.9"

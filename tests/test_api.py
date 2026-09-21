@@ -787,3 +787,12 @@ def test_start_with_windows_is_one_entry_that_can_be_removed(tmp_path, monkeypat
     assert state["settings"]["start_with_windows"] is False
     assert fake.values == {}
     rig.api.set_setting("start_with_windows", False)  # removing it twice is not an error
+
+
+def test_the_build_is_named_so_two_of_one_version_cannot_be_confused(tmp_path):
+    """A version only helps if somebody remembers to bump it; a timestamp cannot be
+    forgotten. Two builds of 0.2.0 shipped once, and one of them was broken."""
+    rig = Rig(tmp_path, present=False)
+    state = rig.state()
+    assert state["version"]
+    assert state["build"] == "development", "running from source, so there is no .exe to date"

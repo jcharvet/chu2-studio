@@ -121,7 +121,8 @@ export const SettingsDialog = {
               <span class="icon icon-16 i-clock-counter-clockwise" aria-hidden="true"></span>Restore original…</button>
           </div>
           <h3 class="eyebrow">About</h3>
-          <p class="copy" data-test="about-version">CHU 2 Studio {{ state.version }}</p>
+          <p class="copy" data-test="about-version">CHU 2 Studio {{ state.version }}<template
+            v-if="state.build && state.build !== 'development'"> · built {{ state.build }}</template></p>
           <p class="meta" data-test="disclaimer">Unofficial community app · not affiliated with or endorsed by
             Moondrop · open source (MIT). Works offline: no account, no telemetry.</p>
           <ul class="credits" data-test="credits">

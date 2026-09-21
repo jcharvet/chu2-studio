@@ -23,10 +23,12 @@ Rules worth knowing:
 
 from __future__ import annotations
 
+import datetime
 import itertools
 import logging
 import math
 import os
+import sys
 import threading
 from typing import Any, Callable, Dict, List, Optional, Tuple
 
@@ -36,6 +38,21 @@ from ..store import THEMES, Store, band_to_dict
 from . import autostart
 
 logger = logging.getLogger(__name__)
+
+
+def _build_stamp() -> str:
+    """When this copy was built, so two builds of one version cannot be confused.
+
+    A version number only helps if it is bumped every time, and that is exactly
+    what gets forgotten. The .exe's own timestamp cannot be forgotten.
+    """
+    if not getattr(sys, "frozen", False):
+        return "development"
+    try:
+        when = os.path.getmtime(sys.executable)
+    except OSError:  # pragma: no cover
+        return "unknown"
+    return datetime.datetime.fromtimestamp(when).strftime("%Y-%m-%d %H:%M")
 
 BAND_TYPES = ("peaking", "low_shelf", "high_shelf")
 #: Brief §3.5 idle slots: Bass, Body, Voice, Detail, Air (all 0 dB)
@@ -641,6 +658,7 @@ class Api:
             "name": self._name,
             "quick": dict(self._quick) if self._quick else None,
             "version": __version__,
+            "build": _build_stamp(),
             "preamp": self._result.to_dict(),
             "save": dict(self._save, mismatched=list(self._save["mismatched"])),
             "backup": dict(self._backup) if self._backup else None,
