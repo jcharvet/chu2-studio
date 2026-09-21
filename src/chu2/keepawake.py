@@ -69,7 +69,27 @@ def available() -> bool:
 
 
 def running() -> bool:
-    return _stream is not None
+    """True only if the stream is really playing.
+
+    Unplugging the CHU 2 kills the stream underneath us, so "we opened one once" is
+    not the same as "sound is coming out".
+    """
+    if _stream is None:
+        return False
+    try:
+        return bool(_stream.active)
+    except Exception:  # pragma: no cover - a dead stream can raise instead
+        return False
+
+
+def restart() -> bool:
+    """Open the stream again, on whatever device index the CHU 2 has now.
+
+    Called when the earphones come back: a replug or a wake from sleep gives them a
+    new index, and the old stream is dead. Test #39.
+    """
+    stop()
+    return start()
 
 
 def one_cycle() -> bytes:

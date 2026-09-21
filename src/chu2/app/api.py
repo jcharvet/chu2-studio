@@ -452,6 +452,10 @@ class Api:
     def _ev_connected(self, data: Dict[str, Any], after: List[Callable[[], None]]) -> None:
         slot, bands = data["slot"], list(data["bands"])
         logger.info("CHU 2 connected (EQ slot 0x%02X)", slot)
+        # A replug or a wake from sleep leaves the tone's stream dead on an index that
+        # no longer exists, so it has to be opened again (test #39).
+        if self._settings.get("keep_awake") and not keepawake.running():
+            after.append(keepawake.restart)
         self._connected = True
         self._device_error = None
         self._eq_on = slot != dsp.KT_SLOT_OFF
@@ -482,6 +486,7 @@ class Api:
 
     def _ev_disconnected(self, data: Dict[str, Any], after: List[Callable[[], None]]) -> None:
         logger.info("CHU 2 disconnected (%s)", data.get("reason", "unknown"))
+        keepawake.stop()  # the stream died with the earphones; _ev_connected opens a new one
         self._connected = False
         self._live = {}
         if data.get("reason") == "unplugged" and self._recheck == "after_unplug":

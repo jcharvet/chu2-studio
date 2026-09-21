@@ -669,6 +669,10 @@ class _FakeStream:
         self.kwargs = kwargs
         self.state = "new"
 
+    @property
+    def active(self):
+        return self.state == "started"
+
     def start(self):
         self.state = "started"
 
@@ -796,3 +800,27 @@ def test_the_build_is_named_so_two_of_one_version_cannot_be_confused(tmp_path):
     state = rig.state()
     assert state["version"]
     assert state["build"] == "development", "running from source, so there is no .exe to date"
+
+
+def test_the_tone_follows_the_earphones_across_a_replug(tmp_path, monkeypatch):
+    """Unplugging kills the audio stream. The app reconnects to the CHU 2, so it has to
+    reopen the tone too - otherwise the clicking comes back and nothing says why."""
+    audio = _fake_audio(monkeypatch)
+    store = Store(str(tmp_path / "app"))
+    store.save_settings(dict(store.load_settings(), keep_awake=True))
+    rig = Rig(tmp_path, present=True, store=store)
+    rig.tick()
+    assert len(audio.streams) >= 1
+    first = audio.streams[-1]
+    assert first.state == "started"
+
+    first.state = "dead"          # what an unplug does to it
+    rig.plug.present = False
+    rig.tick()
+    assert rig.state()["connected"] is False
+
+    rig.plug.present = True
+    rig.tick()
+    assert rig.state()["connected"] is True
+    assert len(audio.streams) > 1, "the tone must be opened again after a replug"
+    assert audio.streams[-1].state == "started"
